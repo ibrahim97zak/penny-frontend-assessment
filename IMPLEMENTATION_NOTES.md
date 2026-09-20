@@ -9,9 +9,7 @@
 -
 
 ## 2. Component & state model
-<!-- The screens, the view-state each component exposes, and how data flows from the mock API into the
-template. -->
-
+When you open the list screen, it pulls up your organization's Change Request summaries while clearly showing whether the data is loading, ready, empty, or experiencing an error. To keep things fast, the status filter doesn't request new data from the server; it simply sorts through the summaries you've already loaded. Clicking a specific row sends its ID to the detail screen, which then fetches the complete file to display line-item differences, totals, a chronological timeline, and available actions. Finally, the page's overall loading state is kept separate from the action buttons, ensuring that if an approval or rejection is slow to process, you can still view the request details without accidentally submitting your decision twice.
 -
 
 ## 3. Invariants I keep
