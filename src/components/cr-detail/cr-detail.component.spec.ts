@@ -31,4 +31,27 @@ describe('CrDetailComponent', () => {
 		const approveBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__approve');
 		expect(approveBtn.disabled).toBe(true);
 	});
+
+	it('renders the audit timeline oldest first', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+
+		const actions = Array.from(fixture.nativeElement.querySelectorAll('.cr-timeline__action')).map((element: Element) =>
+			element.textContent?.trim(),
+		);
+
+		expect(actions).toEqual(['CREATE', 'SUBMIT', 'SEND_FOR_APPROVAL']);
+	});
+
+	it('renders diff rows and formatted totals', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+
+		const totals = fixture.nativeElement.querySelector('.cr-detail__totals').textContent;
+		const rows = fixture.nativeElement.querySelectorAll('.cr-diff__row');
+
+		expect(totals).toContain('USD 8,000.00 → USD 8,500.00');
+		expect(totals).toContain('Δ USD 500.00');
+		expect(rows.length).toBe(2);
+		expect(rows[0].getAttribute('data-kind')).toBe('changed');
+		expect(rows[1].getAttribute('data-kind')).toBe('unchanged');
+	});
 });
