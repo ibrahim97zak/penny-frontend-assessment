@@ -26,10 +26,37 @@ describe('CrDetailComponent', () => {
 		expect(fixture.nativeElement.querySelector('.cr-detail__header h2').textContent).toContain('Add 1 unit of SKU-A');
 	});
 
-	it('disables Approve for a read-only viewer on a pending CR', async () => {
-		const fixture = await render(users.viewer, 'CR-1'); // viewer: cr_r_o only; CR-1 is PENDING_APPROVAL
-		const approveBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__approve');
-		expect(approveBtn.disabled).toBe(true);
+	it('hides review actions for a read-only viewer on a pending request', async () => {
+		const fixture = await render(users.viewer, 'CR-1');
+
+		expect(fixture.nativeElement.querySelector('.cr-actions__approve')).toBeNull();
+		expect(fixture.nativeElement.querySelector('.cr-actions__reject')).toBeNull();
+	});
+
+	it('hides review actions after a request is no longer pending', async () => {
+		const fixture = await render(users.approver, 'CR-2');
+
+		expect(fixture.nativeElement.querySelector('.cr-actions__approve')).toBeNull();
+		expect(fixture.nativeElement.querySelector('.cr-actions__reject')).toBeNull();
+	});
+
+	it('requires a reason before Reject is enabled', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+		const reason: HTMLTextAreaElement = fixture.nativeElement.querySelector('.cr-actions__reason');
+		const rejectButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__reject-btn');
+
+		expect(rejectButton.disabled).toBe(true);
+
+		reason.dispatchEvent(new Event('blur'));
+		fixture.detectChanges();
+
+		expect(fixture.nativeElement.querySelector('.cr-actions__reason-error')?.textContent).toContain('Please enter a reason.');
+
+		reason.value = 'The requested change needs revision.';
+		reason.dispatchEvent(new Event('input'));
+		fixture.detectChanges();
+
+		expect(rejectButton.disabled).toBe(false);
 	});
 
 	it('renders the audit timeline oldest first', async () => {
