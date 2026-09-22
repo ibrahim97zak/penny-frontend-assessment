@@ -3,6 +3,7 @@ import { CrDetailComponent } from './cr-detail.component';
 import { SessionService } from '../../session/session.service';
 import { users } from '../../api/fixtures';
 import { ReqUser } from '../../models/cr.models';
+import { CrApiService } from '../../api/cr-api.service';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -57,6 +58,65 @@ describe('CrDetailComponent', () => {
 		fixture.detectChanges();
 
 		expect(rejectButton.disabled).toBe(false);
+	});
+
+	it('approves a pending request and updates the detail screen', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+		const approveButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__approve');
+
+		approveButton.click();
+		await flush();
+		fixture.detectChanges();
+
+		const actions = Array.from(fixture.nativeElement.querySelectorAll('.cr-timeline__action')).map((element: Element) =>
+			element.textContent?.trim(),
+		);
+
+		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('APPROVED');
+		expect(actions).toContain('APPROVE');
+		expect(fixture.nativeElement.querySelector('.cr-actions__approve')).toBeNull();
+		expect(fixture.nativeElement.querySelector('.cr-actions__reject')).toBeNull();
+	});
+
+	it('keeps the detail visible and shows an error when Approve fails', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+		const api = TestBed.inject(CrApiService);
+		api.failNext = true;
+
+		const approveButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__approve');
+		approveButton.click();
+		await flush();
+		fixture.detectChanges();
+
+		const retryableApproveButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__approve');
+
+		expect(fixture.nativeElement.querySelector('.cr-actions__error')?.textContent).toContain('Network error');
+		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('PENDING_APPROVAL');
+		expect(retryableApproveButton.disabled).toBe(false);
+	});
+
+	it('rejects a pending request and records the reason', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+		const reason: HTMLTextAreaElement = fixture.nativeElement.querySelector('.cr-actions__reason');
+		const rejectButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__reject-btn');
+
+		reason.value = 'The requested change needs revision.';
+		reason.dispatchEvent(new Event('input'));
+		fixture.detectChanges();
+
+		rejectButton.click();
+		await flush();
+		fixture.detectChanges();
+
+		const entries = Array.from(fixture.nativeElement.querySelectorAll('.cr-timeline__entry')).map((element: Element) =>
+			element.textContent?.trim(),
+		);
+
+		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('REJECTED');
+		expect(entries.join(' ')).toContain('REJECT');
+		expect(entries.join(' ')).toContain('The requested change needs revision.');
+		expect(fixture.nativeElement.querySelector('.cr-actions__approve')).toBeNull();
+		expect(fixture.nativeElement.querySelector('.cr-actions__reject')).toBeNull();
 	});
 
 	it('renders the audit timeline oldest first', async () => {
