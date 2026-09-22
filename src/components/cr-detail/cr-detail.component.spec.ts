@@ -6,8 +6,13 @@ import { ReqUser } from '../../models/cr.models';
 import { CrApiService } from '../../api/cr-api.service';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
+const wait = (milliseconds: number) => new Promise((r) => setTimeout(r, milliseconds));
 
-async function render(user: ReqUser, id: string): Promise<ComponentFixture<CrDetailComponent>> {
+async function render(
+	user: ReqUser,
+	id: string,
+	configureApi?: (api: CrApiService) => void,
+): Promise<ComponentFixture<CrDetailComponent>> {
 	TestBed.configureTestingModule({
 		imports: [CrDetailComponent],
 		providers: [{ provide: SessionService, useValue: { user } }],
@@ -15,6 +20,7 @@ async function render(user: ReqUser, id: string): Promise<ComponentFixture<CrDet
 	await TestBed.compileComponents();
 	const fixture = TestBed.createComponent(CrDetailComponent);
 	fixture.componentInstance.id = id;
+	configureApi?.(TestBed.inject(CrApiService));
 	fixture.detectChanges(); // ngOnInit -> load()
 	await flush(); // let the mock API resolve
 	fixture.detectChanges(); // render the loaded state
@@ -30,6 +36,16 @@ describe('CrDetailComponent', () => {
 	it('hides review actions for a read-only viewer on a pending request', async () => {
 		const fixture = await render(users.viewer, 'CR-1');
 
+		expect(fixture.nativeElement.querySelector('.cr-actions__approve')).toBeNull();
+		expect(fixture.nativeElement.querySelector('.cr-actions__reject')).toBeNull();
+	});
+
+	it('hides review actions for a user with read permission but no approval policy', async () => {
+		const readOnlyUser: ReqUser = { id: 'reader', orgCode: 'org-alpha', policies: ['cr_r_o'] };
+		const fixture = await render(readOnlyUser, 'CR-1');
+
+		expect(fixture.componentInstance.canApprove).toBe(false);
+		expect(fixture.componentInstance.canReject).toBe(false);
 		expect(fixture.nativeElement.querySelector('.cr-actions__approve')).toBeNull();
 		expect(fixture.nativeElement.querySelector('.cr-actions__reject')).toBeNull();
 	});
@@ -58,6 +74,51 @@ describe('CrDetailComponent', () => {
 		fixture.detectChanges();
 
 		expect(rejectButton.disabled).toBe(false);
+	});
+
+	it('keeps Reject disabled for a whitespace-only reason', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+		const reason: HTMLTextAreaElement = fixture.nativeElement.querySelector('.cr-actions__reason');
+		const rejectButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__reject-btn');
+
+		reason.value = '   \n\t';
+		reason.dispatchEvent(new Event('input'));
+		fixture.detectChanges();
+
+		expect(rejectButton.disabled).toBe(true);
+	});
+
+	it('shows the loading state while detail data is pending', async () => {
+		TestBed.configureTestingModule({
+			imports: [CrDetailComponent],
+			providers: [{ provide: SessionService, useValue: { user: users.approver } }],
+		});
+		await TestBed.compileComponents();
+		const fixture = TestBed.createComponent(CrDetailComponent);
+		fixture.componentInstance.id = 'CR-1';
+		TestBed.inject(CrApiService).latencyMs = 20;
+		fixture.detectChanges();
+
+		expect(fixture.nativeElement.querySelector('.cr-detail__loading')?.textContent).toContain('Loading');
+
+		await wait(25);
+		fixture.detectChanges();
+		expect(fixture.nativeElement.querySelector('.cr-detail__header h2').textContent).toContain('Add 1 unit of SKU-A');
+	});
+
+	it('shows a load error and recovers when Retry succeeds', async () => {
+		const fixture = await render(users.approver, 'CR-1', (api) => {
+			api.failNext = true;
+		});
+
+		expect(fixture.nativeElement.querySelector('.cr-detail__error')?.textContent).toContain('Network error');
+		expect(fixture.nativeElement.querySelector('.cr-detail__header')).toBeNull();
+
+		fixture.nativeElement.querySelector('.cr-detail__error button').click();
+		await flush();
+		fixture.detectChanges();
+
+		expect(fixture.nativeElement.querySelector('.cr-detail__header h2').textContent).toContain('Add 1 unit of SKU-A');
 	});
 
 	it('approves a pending request and updates the detail screen', async () => {
@@ -93,6 +154,46 @@ describe('CrDetailComponent', () => {
 		expect(fixture.nativeElement.querySelector('.cr-actions__error')?.textContent).toContain('Network error');
 		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('PENDING_APPROVAL');
 		expect(retryableApproveButton.disabled).toBe(false);
+	});
+
+	it('shows an error and keeps Reject available when Reject fails', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+		const api = TestBed.inject(CrApiService);
+		api.failNext = true;
+
+		const reason: HTMLTextAreaElement = fixture.nativeElement.querySelector('.cr-actions__reason');
+		reason.value = 'Please review the requested quantity.';
+		reason.dispatchEvent(new Event('input'));
+		fixture.detectChanges();
+
+		const rejectButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__reject-btn');
+		rejectButton.click();
+		await flush();
+		fixture.detectChanges();
+
+		expect(fixture.nativeElement.querySelector('.cr-actions__error')?.textContent).toContain('Network error');
+		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('PENDING_APPROVAL');
+		expect(fixture.nativeElement.querySelector('.cr-actions__reject-btn').disabled).toBe(false);
+	});
+
+	it('prevents duplicate Approve requests while the API is slow', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+		const api = TestBed.inject(CrApiService);
+		api.latencyMs = 20;
+		const approveSpy = jest.spyOn(api, 'approve');
+		const approveButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__approve');
+
+		approveButton.click();
+		approveButton.click();
+		fixture.detectChanges();
+
+		expect(approveSpy).toHaveBeenCalledTimes(1);
+		expect(approveButton.disabled).toBe(true);
+
+		await wait(25);
+		fixture.detectChanges();
+
+		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('APPROVED');
 	});
 
 	it('rejects a pending request and records the reason', async () => {

@@ -27,7 +27,7 @@ export class CrDetailComponent implements OnInit {
 	submitting = false;
 	actionError?: string;
 
-	rejectControl = new FormControl('', { nonNullable: true, validators: [Validators.required] });
+	rejectControl = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/\S/)] });
 
 	constructor(private readonly api: CrApiService, private readonly session: SessionService) {}
 
