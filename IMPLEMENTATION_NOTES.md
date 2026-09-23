@@ -53,4 +53,6 @@ For the detail component, `state` represents the load lifecycle (`idle`, `loadin
 - I would show Before, After, and Difference separately at the top and add the amount and difference for each line item.
 - I would move the rejection reason into a small dialog with Cancel and Reject buttons, while keeping the current validation and error handling.
 - I would add a test that clicks a request in the list and checks that the matching detail opens, including after switching users.
+- I would reset or validate the selected request when the acting user changes. Currently, switching from `otherOrg` with CR-9 selected to `approver` or `viewer` leaves CR-9 selected and shows a Not Found error because that request belongs to another organization.
+- I would refresh the list after a successful approval or rejection so the request immediately appears under the `APPROVED` or `REJECTED` status filter.
 - If I built the rejection dialog, I would test cancelling it, invalid reasons, slow submissions, and API errors. I would also test inaccessible or stale requests.
