@@ -49,4 +49,8 @@ For the detail component, `state` represents the load lifecycle (`idle`, `loadin
 
 ## 7. What I'd improve with more time
 
-- With more time, I would add broader integration coverage for list-to-detail navigation and test additional API/domain error cases, such as an inaccessible request or a stale request changed by another reviewer. I would also record the required walkthrough demonstrating loading, filtering, approval, rejection, and failure recovery.
+- I would make the two-panel layout easier to scan, with a highlighted selected row and clearer status labels.
+- I would show Before, After, and Difference separately at the top and add the amount and difference for each line item.
+- I would move the rejection reason into a small dialog with Cancel and Reject buttons, while keeping the current validation and error handling.
+- I would add a test that clicks a request in the list and checks that the matching detail opens, including after switching users.
+- If I built the rejection dialog, I would test cancelling it, invalid reasons, slow submissions, and API errors. I would also test inaccessible or stale requests.
