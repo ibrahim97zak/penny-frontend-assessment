@@ -8,11 +8,7 @@ import { CrApiService } from '../../api/cr-api.service';
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const wait = (milliseconds: number) => new Promise((r) => setTimeout(r, milliseconds));
 
-async function render(
-	user: ReqUser,
-	id: string,
-	configureApi?: (api: CrApiService) => void,
-): Promise<ComponentFixture<CrDetailComponent>> {
+async function render(user: ReqUser, id: string, configureApi?: (api: CrApiService) => void): Promise<ComponentFixture<CrDetailComponent>> {
 	TestBed.configureTestingModule({
 		imports: [CrDetailComponent],
 		providers: [{ provide: SessionService, useValue: { user } }],
@@ -196,6 +192,31 @@ describe('CrDetailComponent', () => {
 		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('APPROVED');
 	});
 
+	it('prevents duplicate Reject requests while the API is slow', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+		const api = TestBed.inject(CrApiService);
+		api.latencyMs = 20;
+		const rejectSpy = jest.spyOn(api, 'reject');
+		const reason: HTMLTextAreaElement = fixture.nativeElement.querySelector('.cr-actions__reason');
+
+		reason.value = 'Please review the requested quantity.';
+		reason.dispatchEvent(new Event('input'));
+		fixture.detectChanges();
+
+		const rejectButton: HTMLButtonElement = fixture.nativeElement.querySelector('.cr-actions__reject-btn');
+		rejectButton.click();
+		rejectButton.click();
+		fixture.detectChanges();
+
+		expect(rejectSpy).toHaveBeenCalledTimes(1);
+		expect(rejectButton.disabled).toBe(true);
+
+		await wait(25);
+		fixture.detectChanges();
+
+		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('REJECTED');
+	});
+
 	it('rejects a pending request and records the reason', async () => {
 		const fixture = await render(users.approver, 'CR-1');
 		const reason: HTMLTextAreaElement = fixture.nativeElement.querySelector('.cr-actions__reason');
@@ -241,5 +262,14 @@ describe('CrDetailComponent', () => {
 		expect(rows.length).toBe(2);
 		expect(rows[0].getAttribute('data-kind')).toBe('changed');
 		expect(rows[1].getAttribute('data-kind')).toBe('unchanged');
+	});
+
+	it('shows before and after descriptions for a changed line item', async () => {
+		const fixture = await render(users.approver, 'CR-2');
+		const rows: HTMLTableRowElement[] = Array.from(fixture.nativeElement.querySelectorAll('.cr-diff__row'));
+		const changedRow = rows.find((row) => row.dataset.kind === 'changed');
+
+		expect(changedRow?.cells[2].textContent).toContain('Widget B');
+		expect(changedRow?.cells[3].textContent).toContain('Widget B (new supplier)');
 	});
 });
