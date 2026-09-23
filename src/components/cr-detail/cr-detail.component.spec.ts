@@ -15,9 +15,9 @@ async function render(user: ReqUser, id: string, configureApi?: (api: CrApiServi
 	});
 	await TestBed.compileComponents();
 	const fixture = TestBed.createComponent(CrDetailComponent);
-	fixture.componentInstance.id = id;
+	fixture.componentRef.setInput('id', id);
 	configureApi?.(TestBed.inject(CrApiService));
-	fixture.detectChanges(); // ngOnInit -> load()
+	fixture.detectChanges(); // ngOnChanges -> load()
 	await flush(); // let the mock API resolve
 	fixture.detectChanges(); // render the loaded state
 	return fixture;
@@ -27,6 +27,19 @@ describe('CrDetailComponent', () => {
 	it('loads and renders the change request title', async () => {
 		const fixture = await render(users.approver, 'CR-1');
 		expect(fixture.nativeElement.querySelector('.cr-detail__header h2').textContent).toContain('Add 1 unit of SKU-A');
+	});
+	it('loads the newly selected request when its id changes', async () => {
+		const fixture = await render(users.approver, 'CR-1');
+
+		expect(fixture.nativeElement.querySelector('.cr-detail__header h2').textContent).toContain('Add 1 unit of SKU-A');
+
+		fixture.componentRef.setInput('id', 'CR-2');
+		fixture.detectChanges();
+		await flush();
+		fixture.detectChanges();
+
+		expect(fixture.nativeElement.querySelector('.cr-detail__header h2').textContent).toContain('Replace SKU-B supplier');
+		expect(fixture.nativeElement.querySelector('.cr-status').textContent).toContain('APPLIED');
 	});
 
 	it('hides review actions for a read-only viewer on a pending request', async () => {
@@ -91,7 +104,7 @@ describe('CrDetailComponent', () => {
 		});
 		await TestBed.compileComponents();
 		const fixture = TestBed.createComponent(CrDetailComponent);
-		fixture.componentInstance.id = 'CR-1';
+		fixture.componentRef.setInput('id', 'CR-1');
 		TestBed.inject(CrApiService).latencyMs = 20;
 		fixture.detectChanges();
 
