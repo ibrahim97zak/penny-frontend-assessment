@@ -2,10 +2,8 @@
 
 ## 1. What I changed
 
-<!-- Grouped by task: bugs fixed and features implemented (component + template). -->
-
 - Fixed the diff calculation so line items with the same SKU but changed quantity, price, or description are classified as `changed` rather than `unchanged`.
-- Completed the Change Request status filter by deriving visible rows from the loaded API summaries. Added a distinct message when data is loaded but no rows match the selected status, and hides the table in that case.
+- Completed the Change Request status filter by deriving visible rows from the loaded API summaries. The template shows a distinct message and hides the table when no rows match the selected status.
 - Completed the detail screen:
   - Renders the baseline/proposed diff, including added, removed, changed, and unchanged rows.
   - Displays formatted baseline total, proposed total, and delta.
@@ -23,8 +21,6 @@ For the detail component, `state` represents the load lifecycle (`idle`, `loadin
 
 ## 3. Invariants I keep
 
-<!-- Which properties the UI guarantees, and where in the component/template each is enforced. -->
-
 | Invariant | How / where |
 | --- | --- |
 | Changing the status filter does not mutate the API-loaded summaries. | `CrListComponent.visibleRows` derives a rendered array from `state.data` and `statusFilter`. |
@@ -36,15 +32,11 @@ For the detail component, `state` represents the load lifecycle (`idle`, `loadin
 
 ## 4. Testing strategy
 
-<!-- What you tested (component/DOM vs pure) and why; what you deliberately skipped given the budget. -->
-
 - Added TestBed DOM tests for filtering, filter-empty feedback, row selection, loading, and error recovery. The error test uses the supplied mock API's `failNext` control and verifies that clicking Retry restores the list.
-- Added detail TestBed DOM tests for loading and retry states, read-only permission gating, terminal-status action hiding, chronological timeline rendering, diff and totals rendering, rejection validation, approve/reject success flows, approve/reject failures, and duplicate-click prevention during a slow approval request.
-- The focused detail suite passes 15 tests, and the complete project suite passes 25 tests. TypeScript checking and ESLint also pass.
+- Added detail TestBed DOM tests for loading and retry states, read-only permission gating, terminal-status action hiding, chronological timeline rendering, diff and totals rendering, rejection validation, approve/reject success flows, approve/reject failures, description changes, and duplicate-click prevention during slow approve and reject requests.
+- The focused detail suite passes 17 tests, and the complete project suite passes 28 tests. TypeScript checking and ESLint also pass.
 
 ## 5. Assumptions
-
-<!-- Where the requirements left room for interpretation, the calls you made and why. -->
 
 - Approve and Reject are both governed by the available approval policy because the provided workflow treats them as decisions on a pending request.
 - A rejection containing only whitespace is treated as invalid, since it does not communicate a useful reason.
