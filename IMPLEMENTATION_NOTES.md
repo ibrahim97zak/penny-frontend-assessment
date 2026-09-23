@@ -6,6 +6,7 @@
 - Completed the Change Request status filter by deriving visible rows from the loaded API summaries. The template shows a distinct message and hides the table when no rows match the selected status.
 - Completed the detail screen:
   - Renders the baseline/proposed diff, including added, removed, changed, and unchanged rows.
+  - Reloads the detail when a different Change Request is selected from the list.
   - Displays formatted baseline total, proposed total, and delta.
   - Sorts the audit timeline chronologically without mutating the API response.
   - Shows Approve and Reject only for pending requests and users with an approval policy.
@@ -33,8 +34,8 @@ For the detail component, `state` represents the load lifecycle (`idle`, `loadin
 ## 4. Testing strategy
 
 - Added TestBed DOM tests for filtering, filter-empty feedback, row selection, loading, and error recovery. The error test uses the supplied mock API's `failNext` control and verifies that clicking Retry restores the list.
-- Added detail TestBed DOM tests for loading and retry states, read-only permission gating, terminal-status action hiding, chronological timeline rendering, diff and totals rendering, rejection validation, approve/reject success flows, approve/reject failures, description changes, and duplicate-click prevention during slow approve and reject requests.
-- The focused detail suite passes 17 tests, and the complete project suite passes 28 tests. TypeScript checking and ESLint also pass.
+- Added detail TestBed DOM tests for loading and retry states, changing the selected request, read-only permission gating, terminal-status action hiding, chronological timeline rendering, diff and totals rendering, rejection validation, approve/reject success flows, approve/reject failures, description changes, and duplicate-click prevention during slow approve and reject requests.
+- The focused detail suite passes 18 tests, and the complete project suite passes 29 tests. TypeScript checking and ESLint also pass.
 
 ## 5. Assumptions
 
